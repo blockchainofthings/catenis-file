@@ -1,0 +1,26 @@
+{
+  "name": "catenis-file",
+  "version": "1.0.0",
+  "description": "Helper library used to prepare file contents to be stored/recovered onto/from the Bitcoin blockchain via Catenis Enterprise",
+  "main": "index.js",
+  "scripts": {
+    "test": "./node_modules/.bin/mocha"
+  },
+  "keywords": [
+    "Catenis",
+    "Catenis Enterprise",
+    "Blockchain of Things",
+    "blockchain",
+    "file"
+  ],
+  "author": "Cláudio de Castro",
+  "license": "MIT",
+  "devDependencies": {
+    "chai": "^4.2.0",
+    "mocha": "^6.1.4"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/blockchainofthings/catenis-file.git"
+  }
+}
