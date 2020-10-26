@@ -12,7 +12,7 @@ npm install catenis-file
 
 ### Prepare file contents to be stored onto the blockchain
 
-#### Sending file contents at once
+#### Send file contents directly
 
 ```javascript
 const ctnFile = require('catenis-file');
@@ -30,7 +30,7 @@ const modifiedFileContents = ctnFile.FileHeader.encode(fileInfo);
 // Process modified file contents eventually passing it to Catenis to be stored
 ```
 
-#### Break up file contents before sending them
+#### Break file contents into chunks before sending it
 
 ```javascript
 const ctnFile = require('catenis-file');
@@ -45,7 +45,7 @@ const fileInfo = {
 // Prepend file metadata header to file contents
 const modifiedFileContents = ctnFile.FileHeader.encode(fileInfo);
 
-const msgChunker = new ctnFile.MessageChunker(modifiedFileContents, 1024);
+const msgChunker = new ctnFile.MessageChunker(modifiedFileContents, 'base64', 1024);
 
 let msgChunk;
 
@@ -54,11 +54,12 @@ while ((msgChunk = msgChunker.nextMessageChunk()) !== undefined) {
 }
 ```
 
-> **Note**: in practice, the content of a file only needs to be broken up if it is very long, typically above 10 MB.
+> **Note**: in practice, the contents of a file only needs to be broken into chunks if it is very long, typically
+> above 10 MB.
 
 ### Recover file contents stored on the blockchain
 
-#### Receive the whole file contents at once
+#### Receive the whole file contents directly
 
 ```javascript
 const ctnFile = require('catenis-file');
