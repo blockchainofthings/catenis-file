@@ -1,61 +1,89 @@
 /**
- * Function class to be used for both passing or reading messages in chunks to/from Catenis
- *
- * @param [message] {Buffer} The whole message's contents to be chunked. Required for passing messages in chunks
- *  to Catenis
- * @param maxChunkSizeOrEncoding {number|string} If a number is passed, it is the maximum size, in bytes, that a
- *  message chunk can be (after base64 encoding). Required for passing messages in chunks to Catenis. Otherwise,
- *  a string should be passed and, in that case, it specifies the text encoding to be used for received message
- *  chunks. Required for reading messages in chunks from Catenis
+ * Message chunker class.
  * @constructor
+ * @param {Buffer} [message] The whole message to be broken down in chunks.
+ * @param {string} [encoding=base64] The text encoding to be used for encoding/decoding the message data chunks.
+ *                                    Valid values: 'hex', 'base64'. If not set, 'base64' is assumed.
+ * @param {number} [maxChunkSize] Maximum size, in bytes, that a message data chunk can be (after encoding).
  */
-function MessageChunker(message, maxChunkSizeOrEncoding) {
-    if (typeof message === 'number' || typeof message === 'string') {
-        maxChunkSizeOrEncoding = message;
+function MessageChunker(message, encoding, maxChunkSize) {
+    if (typeof message === 'string') {
+        // Message parameter has encoding
+        if (typeof encoding === 'number') {
+            // Encoding parameter has max chunk size
+            maxChunkSize = encoding;
+        }
+
+        encoding = message;
         message = undefined;
     }
+    else if (typeof message === 'number') {
+        // Message parameter has max chunk size
+        maxChunkSize = message;
+        message = encoding = undefined;
+    }
+    else if (typeof encoding === 'number') {
+        // Encoding parameter has max chunk size
+        maxChunkSize = encoding;
+        encoding = undefined;
+    }
 
+    // Validate arguments
+    if (message != undefined && !Buffer.isBuffer(message)) {
+        throw new TypeError('Invalid MessageChunker constructor\'s \'message\' argument');
+    }
+
+    if (encoding != undefined && encoding !== 'hex' && encoding !== 'base64') {
+        throw new TypeError('Invalid MessageChunker constructor\'s \'encoding\' argument');
+    }
+
+    if (maxChunkSize !== undefined && !Number.isInteger(maxChunkSize)
+        && maxChunkSize < (encoding === 'hex' ? 2 : 4))
+    {
+        throw new TypeError('Invalid MessageChunker constructor\'s \'maxChunkSize\' argument');
+    }
+
+    /**
+     * @type {Buffer}
+     */
     this.message = message || Buffer.from('');
+    this.encoding = encoding || 'base64';
+    this.maxChunkSize = maxChunkSize;
+
     this.bytesCount = 0;
-
-    if (typeof maxChunkSizeOrEncoding === 'number') {
-        // Maximum chunk size provided
-        this.maxChunkSize = maxChunkSizeOrEncoding;
-
-        // Calculate maximum size of raw (unencoded) message chunk
-        this.maxRawChunkSize = Math.floor(this.maxChunkSize / 4) * 3;
-    }
-    else if (typeof maxChunkSizeOrEncoding === 'string') {
-        // Encoding provided
-        this.encoding = maxChunkSizeOrEncoding;
-    }
 }
 
 /**
- * Retrieves next message chunk. Used when passing messages in chunks to Catenis
- *
- * @returns {string|undefined} The message chunk encoding in base64
+ * Get next data chunk from message.
+ * @returns {(string|undefined)} Encoded message data chunk.
  */
 MessageChunker.prototype.nextMessageChunk = function () {
-    if (this.maxChunkSize) {
-        const chunkSize = Math.min(this.message.length, this.maxRawChunkSize);
+    if (!this.maxChunkSize) {
+        throw new Error('Unable to break message in chunks; maximum chunk size not specified');
+    }
 
-        if (chunkSize > 0) {
-            const msgChunk = this.message.slice(0, chunkSize);
-            this.message = this.message.slice(chunkSize);
+    if (!this.maxRawChunkSize) {
+        // Calculate maximum size of raw (unencoded) message chunk
+        this.maxRawChunkSize = this.encoding === 'base64'
+            ? Math.floor(this.maxChunkSize / 4) * 3
+            : Math.floor(this.maxChunkSize / 2);
+    }
 
-            this.bytesCount += chunkSize;
+    const chunkSize = Math.min(this.message.length, this.maxRawChunkSize);
 
-            return msgChunk.toString('base64');
-        }
+    if (chunkSize > 0) {
+        const msgChunk = this.message.slice(0, chunkSize);
+        this.message = this.message.slice(chunkSize);
+
+        this.bytesCount += chunkSize;
+
+        return msgChunk.toString(this.encoding);
     }
 };
 
 /**
- * Accumulates a new chunk of data to the message. Used when reading messages in chunks from Catenis
- *
- * @param msgDataChunk {string} The message chunk to be accumulated. It should be encoded in the text encoding
- *  specified when the MessageChunker object was instantiated
+ * Add a new data chunk to message.
+ * @param {string} msgDataChunk Encoded message data chunk.
  */
 MessageChunker.prototype.newMessageChunk = function (msgDataChunk) {
     const bufMsgDataChunk = Buffer.from(msgDataChunk, this.encoding);
@@ -64,22 +92,20 @@ MessageChunker.prototype.newMessageChunk = function (msgDataChunk) {
     this.bytesCount += bufMsgDataChunk.length;
 };
 
-// Used when reading messages in chunks from Catenis
-
 /**
- * Gets the accumulated (supposedly complete) message. Used when reading messages in chunks from Catenis
+ * Retrieve the whole message.
+ * @param {string} [encoding] Text encoding to be used when retrieving message. If not specified, the same encoding
+ *                             used for the message data chunks is used.
  *
- * @returns {string} The accumulated message encoded in the text encoding specified when the MessageChunker
- *  object was instantiated
+ * @returns {string} The encoded message.
  */
-MessageChunker.prototype.getMessage = function () {
-    return this.message.toString(this.encoding);
+MessageChunker.prototype.getMessage = function (encoding) {
+    return this.message.toString(encoding || this.encoding);
 };
 
 /**
- * Gets the total number of bytes of message currently computed
- *
- * @returns {number} Total number of bytes of message currently computed
+ * Get the current number of bytes in message.
+ * @return {number} Total number of bytes.
  */
 MessageChunker.prototype.getBytesCount = function () {
     return this.bytesCount;
