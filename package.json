@@ -1,6 +1,6 @@
 {
   "name": "catenis-file",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Helper library used to prepare file contents to be stored/recovered onto/from the Bitcoin blockchain via Catenis Enterprise",
   "main": "index.js",
   "scripts": {
