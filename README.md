@@ -104,5 +104,5 @@ fileInfo.fileContents = Buffer.from(msgChunker.getMessage(), 'base64');
 
 This Node.js module is released under the [MIT License](LICENSE). Feel free to fork, and modify!
 
-Copyright © 2019, Blockchain of Things Inc.
+Copyright © 2020, Blockchain of Things Inc.
 
